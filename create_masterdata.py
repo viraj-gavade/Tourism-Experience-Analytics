@@ -35,17 +35,17 @@ df = transactions.merge(users, on="UserId", how="left")
 # ---------------------------
 # 4. Merge Location Hierarchy
 # ---------------------------
-# Merge with cities - this will create CountryId_x (from users) and CountryId_y (from cities)
+# Merge with cities
 df = df.merge(cities, on="CityId", how="left", suffixes=("", "_city"))
 
-# Keep CountryId from users (already has the right one), drop the one from cities
+# Keep CountryId from users, drop the one from cities
 if "CountryId_city" in df.columns:
     df = df.drop(columns=["CountryId_city"])
 
-# Now merge with countries on CountryId (from users)
+# Merge with countries
 df = df.merge(countries, on="CountryId", how="left", suffixes=("", "_country"))
 
-# Countries has RegionId and ContinentId - keep the ones from users
+# Keep RegionId and ContinentId from users
 if "RegionId_country" in df.columns:
     df = df.drop(columns=["RegionId_country"])
 if "ContinentId_country" in df.columns:
@@ -54,7 +54,7 @@ if "ContinentId_country" in df.columns:
 # Merge with regions
 df = df.merge(regions, on="RegionId", how="left", suffixes=("", "_region"))
 
-# Regions has ContinentId - keep the one from users
+# Keep ContinentId from users
 if "ContinentId_region" in df.columns:
     df = df.drop(columns=["ContinentId_region"])
 
@@ -70,7 +70,6 @@ df = df.merge(types, on="AttractionTypeId", how="left")
 # ---------------------------
 # 6. Merge Visit Mode Labels
 # ---------------------------
-# Rename VisitMode to VisitModeId in transactions data for proper merge
 df = df.rename(columns={"VisitMode": "VisitModeId"})
 df = df.merge(visitmode, on="VisitModeId", how="left")
 
@@ -84,7 +83,14 @@ print("\nMissing Values Check:")
 print(df.isnull().sum())
 
 # ---------------------------
-# 8. Drop ID Columns
+# 8. Save FULL Dataset (WITH IDs) - FOR FEATURE ENGINEERING
+# ---------------------------
+# Save this one FIRST - it has all the ID columns we need!
+df.to_csv("data/processed/master_dataset_with_ids.csv", index=False)
+print("\n✅ Master Dataset WITH IDs Saved (for feature engineering)")
+
+# ---------------------------
+# 9. Drop ID Columns for Basic ML Dataset
 # ---------------------------
 drop_cols = [
     "TransactionId","UserId",
@@ -93,12 +99,15 @@ drop_cols = [
     "VisitModeId"
 ]
 
-df.drop(columns=drop_cols, inplace=True, errors="ignore")
+df_no_ids = df.drop(columns=drop_cols, errors="ignore")
 
 # ---------------------------
-# 9. Save Final ML Dataset
+# 10. Save ML Dataset Without IDs (legacy version)
 # ---------------------------
-df.to_csv("data/processed/master_ml_dataset.csv", index=False)
+df_no_ids.to_csv("data/processed/master_ml_dataset.csv", index=False)
 
-print("\nMaster ML Dataset Saved as master_ml_dataset.csv")
-print("Script Completed Successfully")
+print("✅ Master ML Dataset (without IDs) Saved as master_ml_dataset.csv")
+print("\nScript Completed Successfully")
+print(f"\nTwo files created:")
+print(f"  1. master_dataset_with_ids.csv ({df.shape[0]} rows, {df.shape[1]} cols) - USE THIS ONE")
+print(f"  2. master_ml_dataset.csv ({df_no_ids.shape[0]} rows, {df_no_ids.shape[1]} cols) - Legacy")
